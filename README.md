@@ -9,3 +9,6 @@ sample image
 
 ## template_2.jpg and template_c.jpg
 Template images not actually necessary in code
+
+## demo.ipynb
+A Jupyter Notebook covering the whole process
