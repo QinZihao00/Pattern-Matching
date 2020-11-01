@@ -37,8 +37,6 @@ def getContours(img):
         contours, hierarchy = cv2.findContours(img_erosion, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         return [tmp for tmp in contours if (385 <= tmp.shape[0] not in [423, 429] and tmp.shape[0] <= 700)]
 
-    # print([tmp.shape[0] for tmp in contours if (150 <= tmp.shape[0])])
-
 
 def getCV(img, coords=None):
     """Get complex vectors"""
