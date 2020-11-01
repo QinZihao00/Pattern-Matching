@@ -184,6 +184,7 @@ if __name__ == '__main__':
 
     # Visualize: Original Image
     plt.figure(figsize=(20, 20))
+    plt.axis('off')
     plt.imshow(imgOri)
     plt.show()
 
