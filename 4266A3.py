@@ -11,7 +11,7 @@ args = parser.parse_args()
 
 def getContours(img):
     """Get contour of template or sample image"""
-    # according to opencv documentation, binary input is preferred, which can be get by applying threshold or
+    # according to opencv documentation, binary input is preferred, which can be obtained by applying threshold or
     # canny edge detection
 
     # thresholding method
@@ -31,9 +31,9 @@ def getContours(img):
     else:
         kernel = np.ones((2, 2), np.uint8)
         img_erosion = cv2.erode(img_binary, kernel, iterations=2)
-        img_dilation = cv2.dilate(img_binary, kernel, iterations=2)
-        img_opening = cv2.morphologyEx(img_binary, cv2.MORPH_OPEN, kernel)
-        img_closing = cv2.morphologyEx(img_binary, cv2.MORPH_CLOSE, kernel)
+        # img_dilation = cv2.dilate(img_binary, kernel, iterations=2)
+        # img_opening = cv2.morphologyEx(img_binary, cv2.MORPH_OPEN, kernel)
+        # img_closing = cv2.morphologyEx(img_binary, cv2.MORPH_CLOSE, kernel)
         contours, hierarchy = cv2.findContours(img_erosion, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         return [tmp for tmp in contours if (385 <= tmp.shape[0] not in [423, 429] and tmp.shape[0] <= 700)]
 
@@ -109,7 +109,6 @@ def finalFD(fourierDesc):
     return cur_fourierDesc
 
 
-# Core match function
 def match(template_FD, sample_FDs, sample_contour):
     """Find match patterns and plot on original image"""
     template_FD = finalFD(template_FD[0])

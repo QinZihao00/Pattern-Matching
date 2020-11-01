@@ -12,3 +12,6 @@ Template images not actually necessary in code
 
 ## demo.ipynb
 A Jupyter Notebook covering the whole process
+
+## Run
+`python 4266A3.py --target 2_or_C`
