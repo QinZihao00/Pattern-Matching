@@ -180,19 +180,21 @@ if __name__ == '__main__':
     match(template_FD, sample_FDs, sample_contour)
 
     # Visualize: Original Image
-    plt.figure(figsize=(20, 20))
+    plt.figure(figsize=(21.7, 28.0))
     plt.axis('off')
     plt.imshow(imgOri)
     plt.show()
 
     # # Visualize: template contour
-    # template_contour_np = np.concatenate(template_contour)[:, 0]
-    # plt.figure()
-    # plt.scatter(template_contour_np[:, 0], -template_contour_np[:, 1], s=1)
-    # plt.show()
+    template_contour_np = np.concatenate(template_contour)[:, 0]
+    plt.figure(figsize=(21.7, 28.0))
+    plt.axis('off')
+    plt.scatter(template_contour_np[:, 0], -template_contour_np[:, 1], s=1)
+    plt.show()
     #
     # # Visualize: sample contour
-    # sample_contour_np = np.concatenate(sample_contour)[:, 0]
-    # plt.figure()
-    # plt.scatter(sample_contour_np[:, 0], -sample_contour_np[:, 1], s=1)
-    # plt.show()
+    sample_contour_np = np.concatenate(sample_contour)[:, 0]
+    plt.figure(figsize=(21.7, 28.0))
+    plt.axis('off')
+    plt.scatter(sample_contour_np[:, 0], -sample_contour_np[:, 1], s=1)
+    plt.show()
