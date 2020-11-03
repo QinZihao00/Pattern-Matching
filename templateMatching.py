@@ -1,8 +1,10 @@
 import argparse
+import math
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.spatial import distance as dist
 
 
 class TemplateMatchingClass(object):
@@ -19,21 +21,152 @@ class TemplateMatchingClass(object):
         # Convert original image to gray scale
         imgray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         # Convert gray scale to binary, words are white, background is black, easy for findContour function
-        threshold, img_binary = cv2.threshold(imgray, 80, 255, cv2.THRESH_BINARY_INV)
+        threshold, img_binary = cv2.threshold(imgray, 120, 255, cv2.THRESH_BINARY_INV)
+
+        plt.figure()
+        plt.imshow(img_binary, cmap='gray')
+        plt.show()
 
         if self.target == '2':
             # image morphology methods
             kernel = np.ones((5, 5), np.uint8)
-            img_dilation = cv2.dilate(img_binary, kernel, iterations=2)
+            img_dilation = cv2.dilate(img_binary, kernel, iterations=1)
             # Get Contour
-            contours, hierarchy = cv2.findContours(img_dilation, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-
+            contours = cv2.Canny(img_binary, threshold1=60, threshold2=150)
+            # contours, hierarchy = cv2.findContours(img_dilation, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         else:
-            kernel = np.ones((2, 2), np.uint8)
-            img_erosion = cv2.erode(img_binary, kernel, iterations=2)
-            contours, hierarchy = cv2.findContours(img_erosion, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+            kernel = np.ones((5, 5), np.uint8)
+            img_dilation = cv2.dilate(img_binary, kernel, iterations=2)
+            contours = cv2.Canny(img_binary, threshold1=60, threshold2=150)
+            # contours, hierarchy = cv2.findContours(img_erosion, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
-        return [tmp for tmp in contours if (320 <= tmp.shape[0])]
+        # plt.figure()
+        # plt.imshow(contours, cmap='gray')
+        # plt.show()
+        num_components, labels = cv2.connectedComponents(contours, connectivity=8)
+
+        # organize those points in a clockwise direction
+        def clockwiseangle_and_distance(point, origin, refvec):
+            # Vector between point and the origin: v = p - o
+            vector = [point[0] - origin[0], point[1] - origin[1]]
+            # Length of vector: ||v||
+            lenvector = math.hypot(vector[0], vector[1])
+            # If length is zero there is no angle
+            if lenvector == 0:
+                return -math.pi, 0
+            # Normalize vector: v/||v||
+            normalized = [vector[0] / lenvector, vector[1] / lenvector]
+            dotprod = normalized[0] * refvec[0] + normalized[1] * refvec[1]  # x1*x2 + y1*y2
+            diffprod = refvec[1] * normalized[0] - refvec[0] * normalized[1]  # x1*y2 - y1*x2
+            angle = math.atan2(diffprod, dotprod)
+            # Negative angles represent counter-clockwise angles so we need to subtract them
+            # from 2*pi (360 degrees)
+            if angle < 0:
+                return 2 * math.pi + angle, lenvector
+            # I return first the angle because that's the primary sorting criterium
+            # but if two vectors have the same angle then the shorter distance should come first.
+            return angle, lenvector
+
+        def order_points(pts):
+            # sort the points based on their x-coordinates
+            xSorted = pts[np.argsort(pts[:, 0]), :]
+            # grab the left-most and right-most points from the sorted
+            # x-roodinate points
+            leftMost = xSorted[:2, :]
+            rightMost = xSorted[2:, :]
+            # now, sort the left-most coordinates according to their
+            # y-coordinates so we can grab the top-left and bottom-left
+            # points, respectively
+            leftMost = leftMost[np.argsort(leftMost[:, 1]), :]
+            (tl, bl) = leftMost
+            # now that we have the top-left coordinate, use it as an
+            # anchor to calculate the Euclidean distance between the
+            # top-left and right-most points; by the Pythagorean
+            # theorem, the point with the largest distance will be
+            # our bottom-right point
+            D = dist.cdist(tl[np.newaxis], rightMost, "euclidean")[0]
+            (br, tr) = rightMost[np.argsort(D)[::-1], :]
+            # return the coordinates in top-left, top-right,
+            # bottom-right, and bottom-left order
+            return np.array([tl, tr, br, bl], dtype="float32")
+
+        def order_points_self(pts, origin):
+            pts = np.delete(pts, np.where(pts == origin), axis=0)
+            sorted_points = [origin]
+            cur_point = origin
+            cur_x, cur_y = cur_point
+            while len(pts) != 0:
+                neighbor_found = False
+                dis = 1
+                while not neighbor_found:
+                    neighbors = {
+                        'N': [cur_x, cur_y + dis],
+                        'NE': [cur_x + dis, cur_y + dis],
+                        'E': [cur_x + dis, cur_y],
+                        'SE': [cur_x + dis, cur_y - dis],
+                        'S': [cur_x, cur_y - dis],
+                        'SW': [cur_x - dis, cur_y - dis],
+                        'W': [cur_x - dis, cur_y],
+                        'WE': [cur_x - dis, cur_y + dis]
+                    }
+                    diff = pts - (np.repeat(cur_point, pts.shape[0], axis=0).reshape(-1, 2))
+                    cur_maht_dis = np.linalg.norm(diff, ord=1, axis=1)
+                    sorted_points.append(pts[cur_maht_dis.argmin(-1)])
+                    cur_point = pts[cur_maht_dis.argmin(-1)]
+                    cur_x, cur_y = cur_point
+                    pts = np.delete(pts, cur_maht_dis.argmin(-1), axis=0)
+                    neighbor_found = True
+
+                    # # print(neighbors, cur_point)
+                    # for direction in list(neighbors.keys()):
+                    #     if neighbors[direction] in pts:
+                    #         sorted_points.append(neighbors[direction])
+                    #         cur_point = neighbors[direction]
+                    #         cur_x, cur_y = cur_point
+                    #         pts.remove(neighbors[direction])
+                    #         neighbor_found = True
+                    #         break
+                    # dis += 1
+                    # if dis % 20 == 0:
+                    #     print(dis)
+            return sorted_points
+
+        # plt.figure()
+        # plt.imshow((labels != 0), cmap='gray')
+        # plt.show()
+        # out_contour = []
+        # for i in range(1, num_components):
+        #     tmp = np.where(labels == i)
+        #     tmp_arr = np.asarray(tmp).transpose(1, 0)
+        #     tmp_arr[:, [0, 1]] = tmp_arr[:, [1, 0]]  # swap columns
+        #     tmp_arr[:, 1] = tmp_arr[:, 1]
+        #     out_contour.append(tmp_arr)
+
+        # plt.figure()
+        # for tmp in out_contour:
+        #     plt.scatter(tmp[:, 0], - tmp[:, 1], s=1, cmap='gray')
+        # plt.show()
+
+        # plt.figure()
+        # print(len(out_contour))
+        # for tmp in out_contour:
+        #     # tmp = tmp.tolist()
+        #     print(tmp.shape)
+        #     ordered_points = order_points_self(tmp, tmp[0])
+        #     for i in range(len(ordered_points)):
+        #         plt.scatter(ordered_points[i][0], - ordered_points[i][1], s=i * 2, cmap='gray')
+        # plt.show()
+
+        plt.figure()
+        plt.imshow(contours, cmap='gray')
+        plt.show()
+
+        contours, hierarchy = cv2.findContours(contours, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        plt.figure()
+        for i in range(len(contours)):
+            plt.scatter(contours[i][:, 0, 0], -contours[i][:, 0, 1], s=1)
+        plt.show()
+        return [tmp for tmp in contours if (300 <= tmp.shape[0])]
 
     def getCV(self, img, coords=None):
         """Get complex vectors"""
@@ -127,16 +260,16 @@ class TemplateMatchingClass(object):
 
             dist.append(metrics['cosine similarity'])
 
-            # cv2.putText(imgOri, str(len(tmp)), (x, y), font, 3, (0, 0, 0), 1, cv2.LINE_AA)
+            x, y, w, h = cv2.boundingRect(sample_contour[len(dist) - 1])
+            cv2.putText(self.imgOri, str(len(tmp)), (x, y), font, 3, (0, 0, 0), 1, cv2.LINE_AA)
+            cnt = 0
+            for metric_name in list(metrics.keys()):
+                # Draw distance on image
+                distText = '{}: {}'.format(metric_name, str(round(metrics[metric_name], 2)))
+                cv2.putText(self.imgOri, distText, (x, y - 10 - 10 * cnt), font, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+                cnt += 1
             # if metrics matches, it will be good match
             if metrics['cosine similarity'] >= simThreshold and metrics['l inf norm'] <= disThreshold:
-                x, y, w, h = cv2.boundingRect(sample_contour[len(dist) - 1])
-                cnt = 0
-                for metric_name in list(metrics.keys()):
-                    # Draw distance on image
-                    distText = '{}: {}'.format(metric_name, str(round(metrics[metric_name], 2)))
-                    cv2.putText(self.imgOri, distText, (x, y - 10 - 10 * cnt), font, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
-                    cnt += 1
                 cv2.rectangle(self.imgOri, (x - 5, y - 5), (x + w + 5, y + h + 5), (40, 255, 0), 2)
 
 
@@ -163,7 +296,7 @@ if __name__ == '__main__':
     elif target == '2':
         simThreshold = 0.95
         disThreshold = 0.16
-        rect = (64, 195, 171, 232)
+        rect = (64, 195, 171, 250)
     else:
         raise NotImplementedError("Only template matching of 2 & c supported!")
 
@@ -179,7 +312,7 @@ if __name__ == '__main__':
 
     # Visualize: Original Image
     plt.figure(figsize=(20, 20))
-    plt.imshow(imgOri)
+    plt.imshow(tempMatch.imgOri)
     plt.show()
     #
     # # Visualize: template contour
@@ -188,8 +321,8 @@ if __name__ == '__main__':
     # plt.scatter(template_contour_np[:, 0], -template_contour_np[:, 1], s=1)
     # plt.show()
     #
-    # # Visualize: sample contour
-    # sample_contour_np = np.concatenate(sample_contour)[:, 0]
-    # plt.figure()
-    # plt.scatter(sample_contour_np[:, 0], -sample_contour_np[:, 1], s=1)
-    # plt.show()
+    # Visualize: sample contour
+    sample_contour_np = np.concatenate(sample_contour)[:, 0]
+    plt.figure()
+    plt.scatter(sample_contour_np[:, 0], -sample_contour_np[:, 1], s=1)
+    plt.show()
