@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 parser = argparse.ArgumentParser(description='Which template to match?')
-parser.add_argument('--target', default='C', type=str, help='Which one to match, 2 or C?')
+parser.add_argument('--target', default='2', type=str, help='Which one to match, 2 or C?')
 args = parser.parse_args()
 
 
@@ -26,18 +26,13 @@ def getContours(img):
         img_dilation = cv2.dilate(img_binary, kernel, iterations=2)
         # Get Contour
         contours, hierarchy = cv2.findContours(img_dilation, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        return [tmp for tmp in contours if (150 <= tmp.shape[0])]
 
     else:
         kernel = np.ones((2, 2), np.uint8)
         img_erosion = cv2.erode(img_binary, kernel, iterations=2)
-        img_dilation = cv2.dilate(img_binary, kernel, iterations=2)
-        img_opening = cv2.morphologyEx(img_binary, cv2.MORPH_OPEN, kernel)
-        img_closing = cv2.morphologyEx(img_binary, cv2.MORPH_CLOSE, kernel)
         contours, hierarchy = cv2.findContours(img_erosion, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        return [tmp for tmp in contours if (385 <= tmp.shape[0] not in [423, 429] and tmp.shape[0] <= 700)]
 
-    # print([tmp.shape[0] for tmp in contours if (150 <= tmp.shape[0])])
+    return [tmp for tmp in contours if (320 <= tmp.shape[0])]
 
 
 def getCV(img, coords=None):
@@ -97,7 +92,7 @@ def getLowFreqFDs(fourierDesc):
     """Get the lowest X of frequency values from the fourier values."""
     # frequency order returned by np.fft is (0, 0.1, 0.2, 0.3, ...... , -0.3, -0.2, -0.1)
     # In transInvariant(), already remove first FD(0 frequency)
-    return fourierDesc[:3]
+    return fourierDesc[:300]
 
 
 def finalFD(fourierDesc):
@@ -163,7 +158,7 @@ if __name__ == '__main__':
 
     if target == 'c':
         simThreshold = 0.95
-        disThreshold = 0.25
+        disThreshold = 0.22
         rect = (489, 189, 134, 193)  # Rectangle area for C
     elif target == '2':
         simThreshold = 0.95
@@ -186,7 +181,7 @@ if __name__ == '__main__':
     plt.figure(figsize=(20, 20))
     plt.imshow(imgOri)
     plt.show()
-
+    #
     # # Visualize: template contour
     # template_contour_np = np.concatenate(template_contour)[:, 0]
     # plt.figure()
