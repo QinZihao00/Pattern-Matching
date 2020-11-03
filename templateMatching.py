@@ -179,7 +179,7 @@ if __name__ == '__main__':
 
     # Visualize: Original Image
     plt.figure(figsize=(21.7, 28.0))
-    plt.imshow(imgOri)
+    plt.imshow(tempMatch.imgOri)
     plt.show()
     #
     # # Visualize: template contour
