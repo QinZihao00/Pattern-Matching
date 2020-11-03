@@ -178,7 +178,7 @@ if __name__ == '__main__':
     tempMatch.match(template_FD, sample_FDs, sample_contour, simThreshold, disThreshold)
 
     # Visualize: Original Image
-    plt.figure(figsize=(20, 20))
+    plt.figure(figsize=(21.7, 28.0))
     plt.imshow(imgOri)
     plt.show()
     #
